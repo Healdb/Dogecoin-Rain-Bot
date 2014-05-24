@@ -1,16 +1,17 @@
 import time
 import praw
 import re
+from math import ceil
 # Login in to Reddit and the bot
 r = praw.Reddit('DogecoinRainBot')
 r.login("USERNAME","PASSWORD")
 
-# regex pattern that finds how much the bot is tipped.
+# creates file where the posts it has already counted are stored.
 
 tip_amount_pattern = re.compile("D?(\d+) ?(?:D|doge)?", re.IGNORECASE)
 
 #defines the summoning command
-Name = ['+/u/dogetipbot', 'verify', '@dogerainbot', 'rain']
+Name = ['+/u/dogetipbot', 'verify', '@randomactofdogebot', 'Rain!']
 
 deleted_comment = '[deleted]'
 banned_users = ['bot', 'Healdb']
@@ -18,7 +19,7 @@ banned_users = ['bot', 'Healdb']
 def find_summons():
     obj2 = open('dogerain_user.txt', 'ab+')
     #Searches for summoning command
-    subreddit_comment = r.get_comments('bots4dogetesting', limit=25)
+    subreddit_comment = r.get_comments('dogecoin', limit=25)
     for comment in subreddit_comment:
         print 'looking for summons'
         comment_text = comment.body
@@ -35,7 +36,15 @@ def find_summons():
             link_id = temp_id[3:]
             time.sleep(5)
             return total_amount, link_id, origin_comment, op_name
-total_amount, link_id, origin_comment, op_name = find_summons()
+while True:
+      try:
+            total_amount, link_id, origin_comment, op_name = find_summons()
+            pass
+      except TypeError:
+            print 'Found no new summons, trying again in 10 seconds.'
+            time.sleep(10)
+            continue
+      break
 
 def comment_count(total_amount, link_id, op_name):
     objd = open('dogerain_com_count.txt', 'ab+')
@@ -45,7 +54,7 @@ def comment_count(total_amount, link_id, op_name):
     submission_comments = submission.comments
     for comment in submission_comments:
         if comment.id not in open("dogerain_com_count.txt").read():
-            objc = open('dogerain_dubs.txt', 'ab+')
+            objc = open('dogerain_dub.txt', 'ab+')
             objd = open('dogerain_com_count.txt', 'ab+')
             objc.write(op_name)
             com_text = comment.body
@@ -57,7 +66,7 @@ def comment_count(total_amount, link_id, op_name):
             else:
                 nam = comment.author
                 comment_op = nam.name
-                is_banned = all(string in comment_op for string in banned_users)
+                is_banned = any(string in comment_op for string in banned_users)
                 if comment_op not in open("dogerain_dubs.txt").read():
                     if is_banned:
                         objd.write(comment.id)
@@ -77,6 +86,7 @@ count, submission_comments, submission = comment_count(total_amount, link_id, op
 def make_rain(total_amount, origin_comment, op_name, count, submission_comments, submission):
     tip_amount = total_amount/count
     print 'Checking to see if there is enough dogecoin for every one...'
+    tip_amount = ceil(tip_amount * 10000) / 10000
     if tip_amount>=4:
         print 'There is enough!'
         time.sleep(5)
@@ -96,7 +106,7 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
             else:
                 nam = comment.author
                 comment_op = nam.name
-                is_banned = all(string in comment_op for string in banned_users)
+                is_banned = any(string in comment_op for string in banned_users)
                 if is_banned:
                     obj3.write(comment_op)
                     obj.write(comment.id)
@@ -121,7 +131,15 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
             obj2.close()
             time.sleep(5)
             find_summons()
-            total_amount, link_id, origin_comment, op_name = find_summons()
+            while True:
+                try:
+                    total_amount, link_id, origin_comment, op_name = find_summons()
+                    pass
+                except TypeError:
+                    print 'Found no new summons, trying again in 10 seconds.'
+                    time.sleep(10)
+                    continue
+                break
             comment_count(total_amount, link_id, op_name)
             count, submission_comments, submission = comment_count(total_amount, link_id, op_name)
             make_rain(total_amount, origin_comment, op_name, submission, count, submission_comments)
@@ -130,10 +148,19 @@ while True:
     print 'Starting bot...'
     make_rain(total_amount, origin_comment, op_name, count, submission_comments, submission)
     print 'Done'
+    open('dogerain_dub.txt', 'w').close()
     open('dogerain_dubs.txt', 'w').close()
     time.sleep(5)
     find_summons()
-    total_amount, link_id, origin_comment, op_name = find_summons()
+    while True:
+      try:
+            total_amount, link_id, origin_comment, op_name = find_summons()
+            pass
+      except TypeError:
+            print 'Found no new summons, trying again in 10 seconds.'
+            time.sleep(10)
+            continue
+      break
     comment_count(total_amount, link_id, op_name)
     count, submission_comments, submission = comment_count(total_amount, link_id, op_name)
     make_rain(total_amount, origin_comment, op_name, count, submission_comments, submission)
