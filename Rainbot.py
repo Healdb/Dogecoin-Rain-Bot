@@ -5,37 +5,87 @@ from math import ceil
 # Login in to Reddit and the bot
 r = praw.Reddit('DogecoinRainBot')
 r.login("USERNAME","PASSWORD")
-
 # creates file where the posts it has already counted are stored.
 
 tip_amount_pattern = re.compile("D?(\d+) ?(?:D|doge)?", re.IGNORECASE)
 
 #defines the summoning command
-Name = ['+/u/dogetipbot', 'verify', '@randomactofdogebot', 'Rain!', 'doge']
+Name = ['+/u/dogetipbot', 'verify', '@randomactofdogebot', 'Rain!']
 count = 0
 deleted_comment = '[deleted]'
 banned_users = ['bot', 'Healdb', 'Bot']
-
+def get_parent(com_id,com_permlink):
+    submission = r.get_submission(url=com_permlink + com_id)
+    submission = submission.comments
+    for comment in submission:
+        com_id =  comment.id
+        oldstr = comment.permalink
+        newstr = oldstr.replace(com_id, "")
+        temp_id = comment.parent_id
+        link_id = temp_id[3:]
+        com_link = newstr + link_id
+        submission = r.get_submission(url=com_link)
+        submission = submission.comments
+        for comment in submission:
+            return comment
 def find_summons():
     obj2 = open('dogerain_user.txt', 'ab+')
     #Searches for summoning command
     messages = r.get_unread('mentions')
+    dtb = 'dogetipbot'
     for comment in messages:
         print 'looking for summons'
         comment_text = comment.body
         origin_comment = comment
-        author = comment.author
-        op_name = author.name
+        com_id= comment.id
+        oldstr = comment.permalink
+        com_permlink = oldstr.replace(com_id, "")
         has_name = all(string in comment_text for string in Name)
-        time.sleep(2)
-        if origin_comment.id not in open("dogerain_user.txt").read() and has_name:
+        author = origin_comment.author
+        op_name = author.name
+        if origin_comment.id not in open("dogerain_user.txt").read() and op_name == dtb:
             print 'Found comment! Getting ready to tip everyone in the thread with the dogecoin...'
-            amount = tip_amount_pattern.findall(comment_text)
+            re1='.*?'   # Non-greedy match on filler
+
+            re2='(?:[a-z][a-z]+)'   # Uninteresting: word
+
+            re3='.*?'   # Non-greedy match on filler
+
+            re4='(?:[a-z][a-z]+)'   # Uninteresting: word
+
+            re5='.*?'   # Non-greedy match on filler
+
+            re6='(?:[a-z][a-z]+)'   # Uninteresting: word
+
+            re7='.*?'   # Non-greedy match on filler
+
+            re8='((?:[a-z][a-z]+))' # Word 1\
+
+            re9='.*?'   # Non-greedy match on filler
+
+            re10='((?:[a-z][a-z]+))'    # Word 2
+
+            re11='.*?'  # Non-greedy match on filler
+
+            re12='(\\d+)'   # Integer Number 1
+
+            rg = re.compile(re1+re2+re3+re4+re5+re6+re7+re8+re9+re10+re11+re12,re.IGNORECASE|re.DOTALL)
+
+            m = rg.search(comment_text)
+
+            if m:
+                amount=m.group(3)
             try:
-                total_amount = float(amount[0])
-                temp_id = comment.parent_id
+                origin_comment = get_parent(com_id,com_permlink)
+                print origin_comment
+                author = origin_comment.author
+                op_name = author.name
+                total_amount = amount
+                print total_amount
+                temp_id = origin_comment.parent_id
                 link_id = temp_id[3:]
-                time.sleep(5)
+                obj2.write(comment.id)
+                comment.mark_as_read()
                 return total_amount, link_id, origin_comment, op_name
             except IndexError:
                 origin_comment.reply('Im sorry, I dont understand tips like that! Message /u/healdb and he will refund the dogecoin :)')
@@ -44,39 +94,38 @@ def find_summons():
                 obj2.close()
                 time.sleep(5)
 
-def comment_count(total_amount, link_id, op_name, submission):
+def comment_count(op_name, submission):
     global count
-    objd = open('dogerain_com_count.txt', 'ab+')
-    obj2 = open('dogerain_user.txt', 'ab+')
+    print 'hey'
     print 'Counting the comments on the post...'
     submission = submission
     submission.replace_more_comments(limit=None, threshold=0)
     submission_comments = submission.comments
     for comment in submission_comments:
+        objc = open('dogerain_dub.txt', 'ab+')
+        objd = open('dogerain_com_count.txt', 'ab+')
+        print comment.body
         if comment.id not in open("dogerain_com_count.txt").read():
-            objc = open('dogerain_dub.txt', 'ab+')
-            objd = open('dogerain_com_count.txt', 'ab+')
-            obje = open('dogerain_dubs.txt', 'ab+')
             objc.write(op_name)
             com_text = comment.body
             is_deleted = all(string in com_text for string in deleted_comment)
             if is_deleted:
+                print 'DELETED \n'
                 objd.write(comment.id)
                 objd.close()
-                time.sleep(5)
             else:
                 nam = comment.author
                 comment_op = nam.name
                 is_banned = any(string in comment_op for string in banned_users)
                 if comment_op in open("dogerain_dub.txt").read():
+                    print 'SEEN \n'
                     objd.write(comment.id)
                     objd.close()
-                    time.sleep(5)
                 else:
                     if is_banned:
+                        print 'BANNED \n'
                         objd.write(comment.id)
                         objd.close()
-                        time.sleep(5)
                     else:
                         count+=1
                         print count
@@ -85,12 +134,11 @@ def comment_count(total_amount, link_id, op_name, submission):
                         objc.write(comment_op)
                         objc.close()
                         objd.close()
-                        time.sleep(7)
     return count, submission_comments, submission
 
 def make_rain(total_amount, origin_comment, op_name, count, submission_comments, submission):
     try:
-        tip_amount = total_amount/count
+        tip_amount = int(total_amount)/int(count)
         pass
     except:
         print 'There were no comments in that thread. Starting again.'
@@ -122,6 +170,7 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
             com_text = comment.body
             is_deleted = all(string in com_text for string in deleted_comment)
             if is_deleted:
+                print '\n DELETED'
                 obj.write(comment.id)
                 obj.close()
                 time.sleep(3)
@@ -130,6 +179,7 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
                 comment_op = nam.name
                 is_banned = any(string in comment_op for string in banned_users)
                 if is_banned:
+                    print '\n BANNED'
                     obj3.write(comment_op)
                     obj.write(comment.id)
                     obj.close()
@@ -137,13 +187,14 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
                     time.sleep(3)
                 else:
                     if comment_op in open("dogerain_dubs.txt").read():
+                        print '\n SEEN'
                         obj.write(comment.id)
                         obj.close()
                         time.sleep(3)
                     else:
                         if comment.id not in open("dogerain_users.txt").read():
                             print 'Found comment to tip, tipping them now'
-                            comment.reply('/u/' + str(op_name) + ' has made it rain! Have some dogecoin! +/u/dogetipbot ' + str(tip_amount) + ' doge')
+                            comment.reply('/u/' + str(op_name) + ' has made it rain! Have some dogecoin! +/u/dogetipbot ' + str(tip_amount) + ' doge \n\n^I ^was ^made ^by ^/u/healdb ^through ^http://bots4doge.com')
                             obj3.write(comment_op)
                             obj.write(comment.id)
                             obj2.write(origin_comment.id)
@@ -151,11 +202,12 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
                             obj2.close()
                             obj3.close()
                             print 'Dogecoin given! Starting again in 30 seconds...'
-                            time.sleep(30)
+                            time.sleep(5)
     else:
         print 'They didnt have enough to make it rain'
         if origin_comment.id not in open("dogerain_user.txt").read():
-            origin_comment.reply('Thats not enough dogecoin to tip everyone in this thread. +/u/dogetipbot ' + str(total_amount) + ' doge verify')
+            obj2 = open('dogerain_user.txt', 'ab+')  
+            origin_comment.reply('Thats not enough dogecoin to tip everyone in this thread. Message /u/healdb and he will refund the dogecoin.')
             obj2.write(origin_comment.id)
             obj2.close()
             print 'Done. Resetting Variables...'
@@ -166,11 +218,9 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
             count = 0
             print 'Starting again in one minute'
             time.sleep(60)
-            break
 
 while True:
     print 'Starting bot...'
-    find_summons()
     while True:
         try:
             total_amount, link_id, origin_comment, op_name = find_summons()
@@ -183,22 +233,19 @@ while True:
             objt = open('dogerain_user.txt', 'ab+')
             if origin_comment.id not in open("dogerain_user.txt").read():
                 print 'they got it wrong'
-                origin_comment.reply('Im sorry, I only work with replies to submissions, not replies to comments! +/u/dogetipbot ' + str(total_amount) + ' doge verify')
+                origin_comment.reply('Im sorry, I only work with replies to submissions, not replies to comments! Message /u/healdb and he will refund the dogecoin.')
                 objt.write(origin_comment.id)
                 objt.close()
                 time.sleep(10)
-    comment_count(total_amount, link_id, op_name, submission)
-    count, submission_comments, submission = comment_count(total_amount, link_id, op_name, submission)
+    count, submission_comments, submission = comment_count(op_name, submission)
     make_rain(total_amount, origin_comment, op_name, count, submission_comments, submission)
-    print 'Done'
+    print 'Done. Resetting Variables'
     open('dogerain_dub.txt', 'w').close()
     open('dogerain_dubs.txt', 'w').close()
     open('dogerain_users.txt', 'w').close()
     open('dogerain_com_count.txt', 'w').close()
+    origin_comment.mark_as_read()
     count = 0
     print 'Starting again in one minute'
     time.sleep(60)
                 
-            
-    
-    
