@@ -2,18 +2,25 @@ import time
 import praw
 import re
 from math import ceil
+
+owner_uname='healdb'
+botusername="USERNAME"
+banned_users = [owner_uname, 'bot' , 'Bot'] #TODO move to a file
+
 # Login in to Reddit and the bot
-r = praw.Reddit('DogecoinRainBot')
-r.login("USERNAME","PASSWORD")
-# creates file where the posts it has already counted are stored.
+r = praw.Reddit('DogecoinRainBot') # a curtosy to reddit to give them useful ideas about API use
+r.login(botusername,"PASSWORD")    # change the password
+
 
 tip_amount_pattern = re.compile("D?(\d+) ?(?:D|doge)?", re.IGNORECASE)
+tipbbot = 'dogetipbot' # the coin tip bot name
 
 #defines the summoning command
-Name = ['+/u/dogetipbot', 'verify', '@randomactofdogebot', 'Rain!']
+Name = ['+/u/' + str(tipbot), 'verify', '@randomactofdogebot', 'Rain!']
 count = 0
 deleted_comment = '[deleted]'
-banned_users = ['bot', 'Healdb', 'Bot']
+banned_users = [owner_uname, 'bot' , 'Bot']
+
 def get_parent(com_id,com_permlink):
     submission = r.get_submission(url=com_permlink + com_id)
     submission = submission.comments
@@ -28,11 +35,12 @@ def get_parent(com_id,com_permlink):
         submission = submission.comments
         for comment in submission:
             return comment
+
 def find_summons():
     obj2 = open('dogerain_user.txt', 'ab+')
     #Searches for summoning command
     messages = r.get_unread('mentions')
-    dtb = 'dogetipbot'
+
     for comment in messages:
         print 'looking for summons'
         comment_text = comment.body
@@ -43,36 +51,23 @@ def find_summons():
         has_name = all(string in comment_text for string in Name)
         author = origin_comment.author
         op_name = author.name
-        if origin_comment.id not in open("dogerain_user.txt").read() and op_name == dtb:
+        if origin_comment.id not in open("dogerain_user.txt").read() and op_name == tipbot:
             print 'Found comment! Getting ready to tip everyone in the thread with the dogecoin...'
-            re1='.*?'   # Non-greedy match on filler
-
-            re2='(?:[a-z][a-z]+)'   # Uninteresting: word
-
-            re3='.*?'   # Non-greedy match on filler
-
-            re4='(?:[a-z][a-z]+)'   # Uninteresting: word
-
-            re5='.*?'   # Non-greedy match on filler
-
-            re6='(?:[a-z][a-z]+)'   # Uninteresting: word
-
-            re7='.*?'   # Non-greedy match on filler
-
-            re8='((?:[a-z][a-z]+))' # Word 1\
-
-            re9='.*?'   # Non-greedy match on filler
-
-            re10='((?:[a-z][a-z]+))'    # Word 2
-
-            re11='.*?'  # Non-greedy match on filler
-
-            re12='(\\d+)'   # Integer Number 1
-
+            re1='.*?'                # Non-greedy match on filler
+            re2='(?:[a-z][a-z]+)'    # Uninteresting: word
+            re3='.*?'                # Non-greedy match on filler
+            re4='(?:[a-z][a-z]+)'    # Uninteresting: word
+            re5='.*?'                # Non-greedy match on filler
+            re6='(?:[a-z][a-z]+)'    # Uninteresting: word
+            re7='.*?'                # Non-greedy match on filler
+            re8='((?:[a-z][a-z]+))'  # Word 1\
+            re9='.*?'                # Non-greedy match on filler
+            re10='((?:[a-z][a-z]+))' # Word 2 
+            re11='.*?'               # Non-greedy match on filler
+            re12='(\\d+)'            # Integer Number 1 tip ammount
             rg = re.compile(re1+re2+re3+re4+re5+re6+re7+re8+re9+re10+re11+re12,re.IGNORECASE|re.DOTALL)
 
             m = rg.search(comment_text)
-
             if m:
                 amount=m.group(3)
             try:
@@ -88,7 +83,7 @@ def find_summons():
                 comment.mark_as_read()
                 return total_amount, link_id, origin_comment, op_name
             except IndexError:
-                origin_comment.reply('Im sorry, I dont understand tips like that! Message /u/healdb and he will refund the dogecoin :)')
+                origin_comment.reply('Im sorry, I dont understand tips like that! Message /u/' + str(owner_uname) + ' and they will refund the dogecoin :)')
                 print 'That wasnt right'
                 obj2.write(origin_comment.id)
                 obj2.close()
@@ -142,7 +137,7 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
         pass
     except:
         print 'There were no comments in that thread. Starting again.'
-        origin_comment.reply('There are no eligible comments in this thread. Please try again. +/u/dogetipbot ' + str(total_amount) + ' doge verify')
+        origin_comment.reply('There are no eligible comments in this thread. Please try again. +/u/' + str(tipbot) " " + str(total_amount) + ' doge verify')
         objt = open('dogerain_user.txt', 'ab+')
         objt.write(origin_comment.id)
         objt.close()
@@ -194,7 +189,7 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
                     else:
                         if comment.id not in open("dogerain_users.txt").read():
                             print 'Found comment to tip, tipping them now'
-                            comment.reply('/u/' + str(op_name) + ' has made it rain! Have some dogecoin! +/u/dogetipbot ' + str(tip_amount) + ' doge \n\n^I ^was ^made ^by ^/u/healdb ^through ^http://bots4doge.com')
+                            comment.reply('/u/' + str(op_name) + ' has made it rain! Have some dogecoin! +/u/" + str(tipbot) + ' ' + str(tip_amount) + ' doge \n\n^I ^was ^initially ^made ^by ^/u/healdb ^through ^http://bots4doge.com')
                             obj3.write(comment_op)
                             obj.write(comment.id)
                             obj2.write(origin_comment.id)
@@ -207,7 +202,7 @@ def make_rain(total_amount, origin_comment, op_name, count, submission_comments,
         print 'They didnt have enough to make it rain'
         if origin_comment.id not in open("dogerain_user.txt").read():
             obj2 = open('dogerain_user.txt', 'ab+')  
-            origin_comment.reply('Thats not enough dogecoin to tip everyone in this thread. Message /u/healdb and he will refund the dogecoin.')
+            origin_comment.reply('Thats not enough dogecoin to tip everyone in this thread. Message /u/'+ str(owner_uname) +' and they will refund the dogecoin.')
             obj2.write(origin_comment.id)
             obj2.close()
             print 'Done. Resetting Variables...'
@@ -233,7 +228,7 @@ while True:
             objt = open('dogerain_user.txt', 'ab+')
             if origin_comment.id not in open("dogerain_user.txt").read():
                 print 'they got it wrong'
-                origin_comment.reply('Im sorry, I only work with replies to submissions, not replies to comments! Message /u/healdb and he will refund the dogecoin.')
+                origin_comment.reply('Im sorry, I only work with replies to submissions, not replies to comments! Message /u/' + str(owner_uname) + " and they will refund the dogecoin.')
                 objt.write(origin_comment.id)
                 objt.close()
                 time.sleep(10)
@@ -248,4 +243,3 @@ while True:
     count = 0
     print 'Starting again in one minute'
     time.sleep(60)
-                
